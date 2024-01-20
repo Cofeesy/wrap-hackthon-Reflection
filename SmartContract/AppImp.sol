@@ -10,10 +10,26 @@ import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
+import "@openzeppelin/contracts/utils/Strings.sol";
 //NFT合约
 contract AppImp is IERC7527App, ERC721Enumerable{
+    using Strings for uint256;
+    // Token name
+    string private _name = puttogether();
+    // Token symbol
+    string private _symbol;
+    //拼接_name
+    function puttogether() internal view returns (string memory){
+        return string(abi.encodePacked("Reflection", uint256ToString(totalSupply())));
+    }
+    //功能函数:uint256转为string类型
+    function uint256ToString(uint256 number) public pure returns (string memory) {
+    return number.toString();
+    }
+
     //1.ERC721构造函数
-    constructor() ERC721("testERC7527App", "test") {}
+    //
+    constructor() ERC721(_name, "Reflection") {}
     //预言机？
     address payable private _oracle;
     //agency是资产定价合约（管理erc20代币）
@@ -22,8 +38,8 @@ contract AppImp is IERC7527App, ERC721Enumerable{
         _;
     }
     //获取nft名字
-    function getName(uint256) external pure returns (string memory) {
-        return "App";
+    function getName(uint256) external view returns (string memory) {
+        return _name;
     }
     //获取最大nft供应量
     function getMaxSupply() public pure override returns (uint256) {

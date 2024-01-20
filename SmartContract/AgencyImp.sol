@@ -23,32 +23,69 @@ import {IERC7527App} from "./Interfaces/IERC7527App.sol";
 //导入标准erc20接口包
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+//import {Ownable} from "openzeppelin-contracts/blob/v5.0.1/contracts/access/Ownable.sol";
+
+//contract AgencyImp is IERC7527Agency Ownable{
 contract AgencyImp is IERC7527Agency{
     //给地址类型一种lib，让address类型有一些额外操作
     using Address for address payable;
     //address.sendValue(address(0),1);
 
+    //pool
+    //struct Pool {
+    //    address owner;//内容创造者的池子
+    //    mapping(address => User) users;//记录mint的用户
+    //    string url;
+    //}
+    //user
+    struct User {
+    address useraddress;//user地址
+    //uint256 shares;//份额数量->实现一个nft所有权的分发，每个用户若只能mint一次，那么shares值只能为0或1
+    uint256 tokenid;//该用户持有的tokenid
+    bool IsHolding;//该用户是否还持有此nft
+    bool IsOwnership;//是否是内容创造者
+    }
+    //记录参与过wrap的用户
+    mapping (address => User) countuser;
+    
+    //mapping(uint256 => Pool) ownerships;//用nft_tokenid绑定池子
+
+    
+    //仅内容创造者可操作
+    //modifier onlyOwner(uint256 tokenid) {
+    //    if (ownerofpool(tokenid) != msg.sender) {
+    //        revert OwnableUnauthorizedAccount(msg.sender);
+    //    }
+    //    _;
+    //}
     //仅nft合约(app合约)地址可操作
-    modifier onlyApp() {
+    //modifier onlyApp() {
         //offset:偏移量
-        uint256 offset = _getImmutableArgsOffset();
-        address app;
-        assembly {
+        //uint256 offset = _getImmutableArgsOffset();
+        //address app;
+        //assembly {
             //后面的getstrategy -> app := shr(0x60, calldataload(add(offset, 0)))
             //有什么不同？
-            app := shr(0x60, calldataload(add(offset, 76)))
-        }
+            //app := shr(0x60, calldataload(add(offset, 76)))
+        //}
         //仅app合约可操作，否则报错
-        require(msg.sender == app, "ERC7527Agency: caller is not the app");
+        //require(msg.sender == app, "ERC7527Agency: caller is not the app");
         //执行接下来的修饰函数
-        _;
-    }
+        //_;
+    //}
+
+    //错误类型
+    //error OwnableUnauthorizedAccount(address account);
+    
     //定义这个合约可接收eth
     receive() external payable {}
 
     function wrap(address to, bytes calldata data) external payable override returns (uint256) {
+        //限制每个地址只能wrap一次
+        require(countuser[msg.sender].IsHolding = false, "Unauthorized Operation");
         //getStrategy获取app合约地址，获取此asset资产
-        //问题，获取哪个app合约地址？
+        //问题，获取哪个app合约地址？->每个内容创造者都会部署属于自己的agency和app合约，所以返回的是【这个】内容创造者的app合约
+        //需要改写
         (address _app, Asset memory _asset,) = getStrategy();
         //返回当前app中铸造nft的总数
         uint256 _sold = IERC721Enumerable(_app).totalSupply();
@@ -61,13 +98,16 @@ contract AgencyImp is IERC7527Agency{
         //第一个传参是asset里的代币地址，0默认为ETH，既让feeRecipient收到mintFee
         _transfer(address(0), _asset.feeRecipient, mintFee);
         //若用户余额大于总费用，将多余的ETH还给msg.sender
-        if (msg.value > swap + mintFee) {//这步判断不会多余吗?
+        if (msg.value > swap + mintFee) {
             //逻辑是转swap和mintFee,,既对msg.sender的msg.value操作,将(msg.value - swap - mintFee)既剩余的value转给用户,swap保留在本合约,mintfee给feeRecipient
             //前面的transfer是将本合约的本该属于用户交的mintFee先转给feeRecipient,后面本合约多交出去的mintFee由用户补上
             _transfer(address(0), payable(msg.sender), msg.value - swap - mintFee);
         }
         //mint一个nft,这个id是递增吗?是的,是递增的,app基本上是一个标准nft合约,因此id是依次递增的
         uint256 id_ = IERC7527App(_app).mint(to, data);
+        
+        User memory user = User(msg.sender, id_, true, false);
+        countuser[msg.sender] = user;
         //检查nft数量
         require(_sold + 1 == IERC721Enumerable(_app).totalSupply(), "ERC7527Agency: Reentrancy");
         //提交事件
@@ -76,7 +116,6 @@ contract AgencyImp is IERC7527Agency{
         return id_;
     }
 
-    //
     function unwrap(address to, uint256 tokenId, bytes calldata data) external payable override {
         //getStrategy获取app合约地址，获取此asset资产
         (address _app, Asset memory _asset,) = getStrategy();
@@ -92,9 +131,12 @@ contract AgencyImp is IERC7527Agency{
         _transfer(address(0), payable(to), swap - burnFee);
         //给feeRecipient转burnFee
         _transfer(address(0), _asset.feeRecipient, burnFee);
+        require(countuser[msg.sender].IsHolding = true, "Unauthorized Operation");
+        countuser[msg.sender].IsHolding = false;
         emit Unwrap(to, tokenId, swap, burnFee);
     }
-
+    
+    //在 EVM 中，所有数据（无论其 Solidity 类型如何）都以大端格式存储在虚拟机内部
     function getStrategy() public pure override returns (address app, Asset memory asset, bytes memory attributeData) {
         //offset
         uint256 offset = _getImmutableArgsOffset();
@@ -143,6 +185,12 @@ contract AgencyImp is IERC7527Agency{
         (, Asset memory _asset,) = getStrategy();
         swap = _asset.premium + input * _asset.premium / 100;
         fee = swap * _asset.burnFeePercent / 10000;
+    }
+    
+    //获取参与过的用户信息
+    function getparticipated(address somebody) external view returns(User memory){
+        require(countuser[somebody].useraddress != address(0), "Unauthorized Operation" );
+        return countuser[somebody];
     }
 
     //转账(swap和fee)

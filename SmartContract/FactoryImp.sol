@@ -7,6 +7,8 @@ import {ClonesWithImmutableArgs} from "clones-with-immutable-args/ClonesWithImmu
 //导入
 import {IERC7527Factory, AgencySettings, AppSettings} from "./interfaces/IERC7527Factory.sol";
 
+//内容创造者使用Factory合约部署自己的app和agency合约
+//那内容url怎么加入？
 contract FactoryImp is IERC7527Factory{
     //汇编相关？？
     using ClonesWithImmutableArgs for address;
