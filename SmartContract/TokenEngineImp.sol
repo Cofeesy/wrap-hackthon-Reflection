@@ -4,15 +4,21 @@ pragma solidity >=0.8.0;
 import { TokenURIEngine } from "./interfaces/TokenURIEngine.sol";
 import { IERC165, ERC165 } from "@openzeppelin/contracts@5.0.0/utils/introspection/ERC165.sol";
 
-contract MiniTokenEngine is TokenURIEngine, ERC165 {
-    mapping(address => mapping(uint256 => address)) user;
+contract TokenEngineImp is TokenURIEngine, ERC165 {
+    mapping(uint256 => string) private _tokenURIs;
     
-    //tokenid还未使用
-    function render(uint256 tokenId) external override pure returns (string memory) {
-        return string(abi.encodePacked('"image": "', 'https://blogimage.4everland.store/DiscreteGDA.png"'));
+    //返回URI
+    function render(uint256 tokenId) external view override returns (string memory) {
+        return _tokenURIs[tokenId];
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(TokenURIEngine).interfaceId || super.supportsInterface(interfaceId);
+    //设置URI
+    function setTokenURI(uint256 tokenId, string memory tokenURI) external {
+        _tokenURIs[tokenId] = tokenURI;
     }
+
+    //IPFS
+    //function setTokenURI(uint256 tokenId, string memory ipfsCid) external {
+    //    _tokenURIs[tokenId] = string(abi.encodePacked("ipfs://", ipfsCid));
+    //}
 }
