@@ -10,12 +10,9 @@ import {IERC7527Factory, AgencySettings, AppSettings} from "./interfaces/IERC752
 import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 contract test{
-    AgencyImp public agency;//Agency合约实例
-    AppImp public app;//App合约实例
-
-    FactoryImp public factory;//Factory合约实例
-
-    //ERC7527WarpReentrancy public warpReentrancy;
+    AgencyImp public agency;
+    AppImp public app;
+    FactoryImp public factory;
 
     address public appDeployAddress;
     address public agencyDeployAddress;
