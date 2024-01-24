@@ -60,6 +60,7 @@ contract AgencyImp is IERC7527Agency{
             _transfer(address(0), payable(msg.sender), msg.value - swap - mintFee);
         }
         uint256 id_ = IERC7527App(_app).mint(to, data);
+        //如果
         if (getparticipated(to).useraddress == address(0)){
             User memory user; 
             user.useraddress = msg.sender;
@@ -67,6 +68,8 @@ contract AgencyImp is IERC7527Agency{
             user.IsHolding = true;
             user.tokenid = id_;
             countuser[to] = user;
+        }else{
+            countuser[to].IsHolding = true;   
         }
         require(_sold + 1 == IERC721Enumerable(_app).totalSupply(), "AgencyImp: Reentrancy");
         emit Wrap(to, id_, swap, mintFee);
