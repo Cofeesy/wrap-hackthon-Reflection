@@ -46,7 +46,7 @@ contract AgencyImp is IERC7527Agency{
     //包装->投入erc20代币，如eth，换取该内容的nft
     function wrap(address to, bytes calldata data) external payable override returns (uint256) {
         if (getparticipated(to).useraddress != address(0)){
-            require(countuser[msg.sender].IsHolding = false, "Unauthorized Operation");
+            require(countuser[msg.sender].IsHolding == false, "Unauthorized Operation");
         }  
         (address _app, Asset memory _asset,) = getStrategy();
         uint256 _sold = IERC721Enumerable(_app).totalSupply();
@@ -66,7 +66,7 @@ contract AgencyImp is IERC7527Agency{
             user.IsOwnership = false;
             user.IsHolding = true;
             user.tokenid = id_;
-            countuser[msg.sender] = user;
+            countuser[to] = user;
         }
         require(_sold + 1 == IERC721Enumerable(_app).totalSupply(), "AgencyImp: Reentrancy");
         emit Wrap(to, id_, swap, mintFee);
@@ -84,8 +84,8 @@ contract AgencyImp is IERC7527Agency{
         _transfer(address(0), payable(to), swap - burnFee);
         //给feeRecipient转burnFee
         _transfer(address(0), _asset.feeRecipient, burnFee);
-        require(countuser[msg.sender].IsHolding = true, "Unauthorized Operation");
-        countuser[msg.sender].IsHolding = false;
+        require(countuser[msg.sender].IsHolding == true, "Unauthorized Operation");
+        countuser[to].IsHolding = false;
         emit Unwrap(to, tokenId, swap, burnFee);
     }
     
